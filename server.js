@@ -3,8 +3,12 @@ var express = require('express'),
     fs      = require('fs'),
     app     = express(),
     eps     = require('ejs'),
-    morgan  = require('morgan');
+    morgan  = require('morgan'),
+    Parse   = require('parse/node');
     
+Parse.initialize("SimpliFly");
+Parse.serverURL = 'http://parse-server-example-simplifly-parse.44fs.preview.openshiftapps.com/parse';
+
 Object.assign=require('object-assign')
 
 app.engine('html', require('ejs').renderFile);
@@ -89,6 +93,69 @@ app.get('/pagecount', function (req, res) {
   } else {
     res.send('{ pageCount: -1 }');
   }
+});
+
+app.get('/simplifly/:status?', function (req, res) {
+    var Request = Parse.Object.extend("Request"), query;
+    if (req.params.status == 'closed') {
+        query = new Parse.Query(Request);
+        query.equalTo("status", "closed");
+        query.find({
+            success: function (results) {
+                res.render('simplifly.html', { section : 3, results : results });
+            }
+        });
+    } else if (req.params.status == 'pending') {
+        query = new Parse.Query(Request);
+        query.equalTo("status", "pending");
+        query.find({
+            success: function (results) {
+                res.render('simplifly.html', { section : 2, results : results });
+            }
+        });
+    } else if (req.params.status == 'open') {
+        query = new Parse.Query(Request);
+        query.equalTo("status", "open");
+        query.find({
+            success: function (results) {
+                res.render('simplifly.html', { section : 1, results : results });
+            }
+        });
+    } else {
+        var open = -1, pending = -1, total = -1;
+        query = new Parse.Query(Request);
+        query.equalTo("status", "open");
+        query.count({
+            success: function (count) {
+                console.log("open : " + count);
+                open = count;
+                if (open > -1 && pending > -1 && total > -1) {
+                    res.render('simplifly.html', { section : 0, open : open, pending : pending, total : total });
+                }
+            }
+        });
+        query = new Parse.Query(Request);
+        query.equalTo("status", "pending");
+        query.count({
+            success: function (count) {
+                console.log("pending : " + count);
+                pending = count;
+                if (open > -1 && pending > -1 && total > -1) {
+                    res.render('simplifly.html', { section : 0, open : open, pending : pending, total : total });
+                }
+            }
+        });
+        query = new Parse.Query(Request);
+        query.count({
+            success: function (count) {
+                console.log("total : " + count);
+                total = count;
+                if (open > -1 && pending > -1 && total > -1) {
+                    res.render('simplifly.html', { section : 0, open : open, pending : pending, total : total });
+                }
+            }
+        });
+    }
 });
 
 // error handling
